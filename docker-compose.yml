@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  tiny-injection:
+    build: .
+    container_name: tiny-injection
+    volumes:
+      - ./reports:/app/reports
+      - ./data:/app/data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    command: ["python", "tinyinject.py", "scan", "--target", "You are a helpful assistant"]
+
+  tiny-xdr:
+    build: .
+    container_name: tiny-xdr
+    volumes:
+      - ./reports:/app/reports
+      - ./xdr_logs:/app/logs
+    command: ["python", "integrate_xdr.py", "--monitor", "--interval", "300"]
+    depends_on:
+      - tiny-injection
+
+  tiny-hunter:
+    build: .
+    container_name: tiny-hunter
+    volumes:
+      - ./hunting_reports:/app/reports
+    command: ["python", "hunt_ai.py", "--github", "--output", "/app/reports/hunt.json"]

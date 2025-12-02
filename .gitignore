@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project files
+*.log
+*.sqlite3
+*.db
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Reports
+reports/
+*.report.json
+*.report.md
+scan_results_*
+exploitation_report_*
+professional_report_*
+ai_hunting_report_*
+xdr_investigation_report_*
+
+# Data (except payload templates)
+data/results/
+data/logs/
+!data/payloads/
+!data/payloads/*.txt
+
+# Temporary files
+tmp/
+temp/
