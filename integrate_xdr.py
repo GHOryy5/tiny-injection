@@ -4,51 +4,75 @@ Production XDR Integration for Tiny Injection
 Connects AI security findings with enterprise XDR/SIEM
 """
 import json
-import sys
 from datetime import datetime
+from typing import List, Dict, Optional
+
 from src.xdr.integration import AIXDR
 from src.core.hunter import AIHunter
 from src.core.real_tester import RealAITester
 
+
 class ProductionXDR:
-    def __init__(self, siem_endpoint=None):
+    def __init__(self, siem_endpoint: Optional[str] = None):
         self.xdr = AIXDR()
         self.siem_endpoint = siem_endpoint
-        self.findings_buffer = []
-        
-    def process_security_scan(self, target: str, findings: list):
-        """Process security scan findings through XDR"""
-        print(f"[XDR] Processing {len(findings)} security findings...")
-        
+        self.buffer: List[Dict] = []
+
+    def process_security_scan(self, target: str, findings: List[Dict]) -> List[Dict]:
+        print(f"[XDR] Processing {len(findings)} findings")
+
         incidents = []
-        
+
         for finding in findings:
-            if finding.get("vulnerable", False):
-                # Create XDR event
-                xdr_event = {
-                    "event_type": "prompt_injection" if finding.get("severity") == "critical" else "ai_vulnerability",
-                    "payload": finding.get("payload", ""),
-                    "model": finding.get("model", "unknown"),
-                    "provider": finding.get("provider", "unknown"),
-                    "confidence": finding.get("confidence", 0.5),
-                    "timestamp": finding.get("timestamp", datetime.now().isoformat()),
-                    "target": target[:100]
-                }
-                
-                # Ingest into XDR
-                xdr_incidents = self.xdr.ingest_ai_event(
-                    xdr_event["event_type"],
-                    xdr_event
-                )
-                
-                incidents.extend(xdr_incidents)
-                
-                # Buffer for SIEM integration
-                self.findings_buffer.append({
-                    "source": "tiny_injection",
-                    "event": xdr_event,
-                    "incidents": xdr_incidents
-                })
+            if not finding.get("vulnerable"):
+                continue
+
+            event = self._build_event(target, finding)
+
+            xdr_hits = self.xdr.ingest_ai_event(
+                event["event_type"],
+                event
+            ) or []
+
+            incidents.extend(xdr_hits)
+
+            self.buffer.append({
+                "source": "ai_security_scan",
+                "event": event,
+                "incidents": xdr_hits,
+                "ingested_at": datetime.utcnow().isoformat()
+            })
+
+        return incidents
+
+    def _build_event(self, target: str, finding: Dict) -> Dict:
+        severity = finding.get("severity", "medium")
+
+        return {
+            "event_type": "prompt_injection" if severity == "critical" else "ai_vulnerability",
+            "payload": finding.get("payload", ""),
+            "model": finding.get("model", "unknown"),
+            "provider": finding.get("provider", "unknown"),
+            "confidence": finding.get("confidence", 0.5),
+            "severity": severity,
+            "timestamp": finding.get("timestamp", datetime.utcnow().isoformat()),
+            "target": target[:80]
+        }
+
+    def flush_to_siem(self):
+        if not self.siem_endpoint or not self.buffer:
+            return
+
+        payload = {
+            "sent_at": datetime.utcnow().isoformat(),
+            "records": self.buffer
+        }
+
+        print(f"[XDR] Forwarding {len(self.buffer)} records to SIEM")
+        print(json.dumps(payload, indent=2))
+
+        self.buffer.clear()
+
         
         # Generate report if incidents found
         if incidents:
